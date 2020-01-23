@@ -32,7 +32,7 @@ const DEFAULT_ENV = {
 const volatile = true; // set to false for persistent ENV
 
 // 3. Configure if the communications should be encrypted
-const encrypted = true;
+const encrypted = false;
 const CRYPTO_SECRET = 'secret'; // WARNING: if you modify this secret make sure to also change the secret in the getenv() functions of your macros
 
 

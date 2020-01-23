@@ -1,5 +1,20 @@
 const xapi = require('xapi');
 
+
+async function init() {
+
+   // Example
+   let variable = 'DEVICE_ID'
+   let secret = await getenv(variable);
+   console.log(`echo \$${variable} = ${secret}`);
+}
+
+
+
+//
+// getenv() function
+//
+
 // Fired when the environnment Macro is ready to provide ENV variables
 xapi.on('env-ready', async (ready) => {
 
@@ -8,19 +23,13 @@ xapi.on('env-ready', async (ready) => {
       return;
    }
 
-   // Example
-   let variable = 'DEVICE_ID'
-   let secret = await getenv(variable);
-   console.log(`echo \$${variable} = ${secret}`);
+   await init();
+   console.debug('init with environment completed');
 });
 
 
-//
-// getenv() function
-//
-
 // Configure if the communications should be encrypted
-const encrypted = true;
+const encrypted = false;
 const CRYPTO_SECRET = 'secret'; // WARNING: if you modify this secret make sure to also change it in the getenv() function
 
 // Asks the 'Environment' macro to send the value of an environment variable
@@ -116,8 +125,8 @@ function getenv(variable) {
 //
 //     xapi.on('env-ready')
 //
-const ENV_RETRY_DELAY = 500;
 xapi.on('ready', async () => {
+   const ENV_RETRY_DELAY = 500;
    const NB_RETRIES = 4;
    let retries = 0;
    while (retries < NB_RETRIES) {
