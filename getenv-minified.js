@@ -4,8 +4,8 @@ const xapi = require('xapi');
 async function init(ENV) {
 
    // Example
-   let secret = await ENV('DEVICE_ID');
-   console.log(`echo \$DEVICE_ID = ${secret}`);
+   let value = await ENV('DEVICE_ID');
+   console.log(`echo \$DEVICE_ID = ${value}`);
 }
 
 
