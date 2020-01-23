@@ -1,6 +1,11 @@
 # Environment variables for CE macros
 
-Enhance your macro runtime with ENV.
+Enhance your macro runtime with ENV variables:
+- ENV is shared across macros on the same device
+- ENV can be volatile or persisted (by default)
+- ENV can be modified over HTTP on the LAN 
+- if cloud-registered, a device ENV can be modified over Webex /xapi endpoint)
+
 
 ```javascript
 const xapi = require('xapi');
@@ -16,6 +21,7 @@ async function init(ENV) {
 ...
 ```
 
+
 ## Quickstart
 
 1. Deploy the [environment](environment.js) macro to a device.
@@ -23,9 +29,9 @@ async function init(ENV) {
 2. Activate the 'environment' macro.
 
    > a new 'ENV' macro is created which you do not need to activate.
-   > this macro is used for the sole purpose of persisting the changes you could make to variables.
+   > this macro is used for the sole purpose of persisting the changes you could make to ENV variables.
 
-3. Copy the [getenv](getenv-minified.js) code snippet to the device, and activate it.
+3. Copy the [getenv](getenv-minified.js) macro to the device, and activate it too.
 
 4. Check the logs in the Macro Editor, you should see:
 
@@ -55,8 +61,8 @@ async function init(ENV) {
 
    ```javascript
    const DEFAULT_ENV = {
-      'DEVICE_ID': 1234,
-      'WEBEX_TOKEN': ABCDEFGHIJ
+      'DEVICE_SECRET': 2345,
+      'WEBEX_TOKEN': "ABCDEFGHIJ"
    }
    ```
 
@@ -70,7 +76,7 @@ async function init(ENV) {
 
 - **Create or update an ENV variable** by sending a message on the LAN or from the cloud
 
-   > Note: the commands below won't work if the communications via Message/Send/Text commands are encrypted
+   > Note: the commands below won't work if the communications via Message/Send/Text commands are encrypted (see below)
 
    ```shell
    # on the LAN: place your credentials
@@ -101,3 +107,28 @@ async function init(ENV) {
          }
       }'
    ```
+
+
+## Security concerns
+
+The communications between the macros reading the ENV, and the 'environment' macro managing the ENV are send in clear text, via xCommand 'Message Send Text'.
+
+As 'Message Send' events can be listened by code with an 'Integrator' role, this represents a potential vulnerability if secrets were to be stored in the env.
+
+We recommend to enhance the security of your deployment by using one or both of: encrypted communications and encryption at rest.
+
+### Encrypted communications
+
+The 'environment' macro and 'getenv()' function support encrypted communications.
+
+Turn on the encrypted boolean both the 'environment' macro and 'getenv()' function to start seeing the message flying as encrypted.
+
+A 'secret-based' and symetric encryption implementation is provided in the proposed implementation.
+Feel free to replace / enhance with a crypto algorithm that better meets your needs.
+
+
+### Encryption at rest
+
+If secrets are to be stored, we recommend you encrypt these secrets before passing them to the environment.
+
+Check the xapi-samples for examples of [symetric](https://github.com/CiscoDevNet/xapi-samples/blob/master/macros/15-cipher.js) and [asymetric](https://github.com/CiscoDevNet/xapi-samples/blob/master/macros/16-encrypt-rsa.js) algorithms compatible with CE's macro runtime.
