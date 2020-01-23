@@ -1,4 +1,4 @@
-# Environments for CE Macros
+# Environment variables for CE macros
 
 Enhance your macro runtime with ENV.
 
