@@ -29,7 +29,7 @@ const DEFAULT_ENV = {
 }
 
 // 2. Configure if the environment should be storing a volatile or persist environment variables into the inactive ENV macro
-const volatile = true; // set to false for persistent ENV
+const volatile = false; // set to false for persistent ENV
 
 // 3. Configure if the communications should be encrypted
 const encrypted = false;
@@ -72,7 +72,7 @@ async function initEnvironment(xapi) {
    }
 
    // Persistent mode
-   console.info('starting in persistent mode: environment variables are read from local ENV macro');
+   console.info('starting in persistent mode: environment variables are stored in the "ENV" macro.');
    let data = await read(xapi);
 
    // if env is empty, create a new storage with default env

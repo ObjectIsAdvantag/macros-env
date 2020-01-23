@@ -1,14 +1,12 @@
 const xapi = require('xapi');
 
-
-async function init() {
+async function init(ENV) {
 
    // Example
    let variable = 'DEVICE_ID'
-   let secret = await getenv(variable);
+   let secret = await ENV(variable);
    console.log(`echo \$${variable} = ${secret}`);
 }
-
 
 
 //
@@ -23,7 +21,7 @@ xapi.on('env-ready', async (ready) => {
       return;
    }
 
-   await init();
+   await init(getenv);
    console.debug('init with environment completed');
 });
 
