@@ -1,4 +1,4 @@
-# Environment variables for CE macros
+# Environment variables for CE macros [![published](https://static.production.devnetcloud.com/codeexchange/assets/images/devnet-published.svg)](https://developer.cisco.com/codeexchange/github/repo/ObjectIsAdvantag/macros-env)
 
 Enhance your macro runtime with ENV variables:
 - ENV is shared across macros on the same device
