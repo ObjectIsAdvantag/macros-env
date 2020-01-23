@@ -25,11 +25,14 @@
 
 // 1. Customize the local environment for your device by adding variables/values below
 const DEFAULT_ENV = {
-   'DEVICE_ID': 1234
+   'DEVICE_SECRET': 1234
 }
 
 // 2. Configure if the environment should be storing a volatile or persist environment variables into the inactive ENV macro
-const volatile = false; // set to false for persistent ENV
+//  - true for transient variables (any change will not survive Macro restart)
+//  - false for persisted variables (changes are persisted into the ENV file of a macro)
+let volatile = false;
+const MACRO_DB_NAME = 'ENV'; // name of the macro which contains the list of ENV variables and values
 
 // 3. Configure if the communications should be encrypted
 const encrypted = false;
@@ -73,13 +76,32 @@ async function initEnvironment(xapi) {
 
    // Persistent mode
    console.info('starting in persistent mode: environment variables are stored in the "ENV" macro.');
-   let data = await read(xapi);
+   let data;
+   try {
+      data = await read(xapi, true);
+   }
+   catch (err) {
+      if (err.message == 'DB_READ_ERROR') {
+         console.log("cannot access ENV");
+      }
+      else {
+         console.info(`unexpected read error while accessing DB: ${JSON.stringify(err.message)}`)
+      }
+   }
 
-   // if env is empty, create a new storage with default env
+   // if ENV is empty, create a new storage with default ENV
    if (!data || (!data.PING)) {
-      console.info('No existing ENV, creating default');
-      ENV = VARIABLE_PING;
-      await write(xapi, ENV);
+      console.info('No existing ENV, creating default...');
+      ENV = DEFAULT_ENV;
+      ENV[PING] = PONG;
+      try {
+         await write(xapi, ENV);
+      }
+      catch (err) {
+         console.debug(`write error while creating DB: ${JSON.stringify(err.message)}`)
+         console.info('Changing to non-persistent mode.');
+         volatile = true;
+      }
    }
    else {
       ENV = data;
@@ -201,19 +223,21 @@ function init(xapi) {
 //
 
 const PREFIX = 'const json = ';
-const DATABASE_NAME = 'ENV'; // name of the macro with db contents
 
 // Read database contents
-async function read(xapi) {
+async function read(xapi, ENVmayNotExist) {
    // Load contents
    let contents;
    try {
-      let macro = await xapi.command('Macros Macro Get', { Name: DATABASE_NAME, Content: true })
+      let macro = await xapi.command('Macros Macro Get', { Name: MACRO_DB_NAME, Content: true })
       contents = macro.Macro[0].Content.substring(PREFIX.length);
    }
    catch (err) {
-      console.error(`cannot load contents from macro: ${DATABASE_NAME}`);
-      throw new Error("DB_ACCESS_ERROR");
+      if (!ENVmayNotExist) {
+         // Log error is ENV should exist
+         console.error(`cannot load contents from macro: ${MACRO_DB_NAME}`);
+      }
+      throw new Error("DB_READ_ERROR");
    }
 
    // Parse contents
@@ -243,12 +267,17 @@ async function write(xapi, data) {
 
    // Write
    try {
-      let res = await xapi.command('Macros Macro Save', { Name: DATABASE_NAME, OverWrite: true, body: contents });
+      let res = await xapi.command('Macros Macro Save', { Name: MACRO_DB_NAME, OverWrite: true, body: contents });
       return (res.status == 'OK');
    }
    catch (err) {
-      console.error(`cannot write contents to macro: ${DATABASE_NAME}`);
-      throw new Error('DB_ACCESS_ERROR');
+      if (err.message == 'Max number of macros reached.') {
+         console.error('Max number of macros reached. Please free up some space.');
+         throw new Error('DB_MACROS_LIMIT');
+      }
+
+      console.debug(`cannot write contents to macro: ${MACRO_DB_NAME}`);
+      throw new Error('DB_WRITE_ERROR');
    }
 }
 
