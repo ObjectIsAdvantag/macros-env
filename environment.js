@@ -37,7 +37,7 @@ const encrypted = false;
 const CRYPTO_SECRET = 'secret'; // WARNING: if you modify this secret make sure to also change the secret in the getenv() functions of your macros
 
 // 4. Configure if communications between macros should be traced
-const TRACE_MESSAGES = true;
+const TRACE_MESSAGES = false;
 
 
 //

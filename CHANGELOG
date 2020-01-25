@@ -3,6 +3,7 @@
 1/25/2020
 - environment is now volatile by default: this simplifies the experience for developers discovering the library
 - new examples folder with initialization coding styles & chatops example
+- trace mode / snifer is now disabled by default
 
 1/23/2020
 - Initial release

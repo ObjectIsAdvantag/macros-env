@@ -131,6 +131,10 @@ xapi.on('env-ready', async (ready) => {
       }'
    ```
 
+- **Troubleshooting**
+
+   Open the 'environment' macro, and change the value of `TRACE_MESSAGES` to `true` to trace the communications between the 'environment' and other macros.
+
 
 ## Architecture
 
