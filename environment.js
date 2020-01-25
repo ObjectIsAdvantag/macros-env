@@ -4,18 +4,12 @@
 //
 
 /**
- * Macro that implements ENV Variables for other macros
+ * a Macro to support ENV Variables 
  * 
  * Quick start:
- *    - customize the DEFAULT_ENV below to set the list of local ENV variables
- *    - define if the environment is volatile or persisted (modifications of variables survive macro restarts)
- *    - deploy the macro to a CE device
- * 
- * Usage:
- *    - copy the 'getenv' code snipped for the xapi-samples/macros folder
- *    - insert the getenv() function into any other macros on the same device 
- *    - access ENV variables from macros once the 'env-ready' event is emmitted
- *    - note that if a variable is not found in ENV, an empty value is returned
+ *    - customize the DEFAULT_ENV below to set/update the default list of ENV variables
+ *    - define if the environment is volatile or persisted: modifications of variables survive macro restarts if persisted
+ *    - deploy the macro
  * 
  */
 
@@ -25,18 +19,25 @@
 
 // 1. Customize the local environment for your device by adding variables/values below
 const DEFAULT_ENV = {
-   'DEVICE_SECRET': 1234
+   DEVICE_SECRET : 1234,
+
+   // Webex Teams for ChatOps 
+   //TEAMS_TOKEN   : 'BOT_TOKEN',
+   //TEAMS_SPACE   : 'Y2lzY29zcGFyazovL3VzL1JPT00vZWVjODFhNzAtM2YwMS0xMWVhLTk5Y2QtZDc1ODAyZjMwZDU1'
 }
 
 // 2. Configure if the environment should be storing a volatile or persist environment variables into the inactive ENV macro
 //  - true for transient variables (any change will not survive Macro restart)
-//  - false for persisted variables (changes are persisted into the ENV file of a macro)
-let volatile = false;
-const MACRO_DB_NAME = 'ENV'; // name of the macro which contains the list of ENV variables and values
+//  - false for persisted variables (changes are persisted into a MACRO_DB_NAME file of a macro)
+let volatile = true;
+const MACRO_DB_NAME = 'ENV'; // name of the macro where variables are persisted (if enabled)
 
 // 3. Configure if the communications should be encrypted
 const encrypted = false;
 const CRYPTO_SECRET = 'secret'; // WARNING: if you modify this secret make sure to also change the secret in the getenv() functions of your macros
+
+// 4. Configure if communications between macros should be traced
+const TRACE_MESSAGES = true;
 
 
 //
@@ -46,7 +47,9 @@ const CRYPTO_SECRET = 'secret'; // WARNING: if you modify this secret make sure 
 // Start macro
 require('xapi').on('ready', async (xapi) => {
    // Add a snifer for debugging purpose
-   addMessageSnifer(xapi);
+   if (TRACE_MESSAGES) {
+      addMessageSnifer(xapi);
+   }
 
    // Initialize environment
    await initEnvironment(xapi);
@@ -111,7 +114,7 @@ async function initEnvironment(xapi) {
 
 // For debugging purpose
 function addMessageSnifer(xapi) {
-   console.debug('snifer added: logging Message Send Text to debug stream')
+   console.debug('snifer: logging Message Send Text to debug stream')
    xapi.event.on("Message Send Text", function (text) {
       console.debug(`snifer: ${text}`);
    });
@@ -275,7 +278,7 @@ async function write(xapi, data) {
          console.error('Max number of macros reached. Please free up some space.');
          throw new Error('DB_MACROS_LIMIT');
       }
-
+      
       console.debug(`cannot write contents to macro: ${MACRO_DB_NAME}`);
       throw new Error('DB_WRITE_ERROR');
    }

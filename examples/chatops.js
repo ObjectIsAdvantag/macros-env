@@ -3,32 +3,58 @@
 // Licensed under the MIT License 
 //
 
+/*
+ * Posts a message to a Webex Teams space
+ * 
+ * This macro leverages 2 libraries: ENV and Chatops
+ * 
+ * Pre-req:
+ *    - environment macro is installed
+ *    - HttpClient is configured
+ *      > xConfiguration HttpClient Mode: On
+ *      > xConfiguration HttpClient AllowInsecureHTTPS: True
+ *
+ */
+
 const xapi = require('xapi');
 
-async function init(ENV) {
-
-   // Example
-   let value = await ENV('DEVICE_SECRET');
-   console.log(`echo \$DEVICE_SECRET = ${value}`);
-}
-
-
-//
-// getenv() function
-//
-
-// Fired when the environnment Macro is ready to provide ENV variables
+// Wait for ENV
 xapi.on('env-ready', async (ready) => {
 
+   // Abort if ENV is not accessible
    if (!ready) {
-      console.warn('Environment macro is not responding! aborting...');
+      console.error('ENV is not responding. Is the "environment" macro installed and active? aborting...');
       return;
    }
 
-   await init(getenv);
-   console.debug('init with environment completed');
+   // Read ENV
+   let chatops;
+   try {
+      const TEAMS_TOKEN = await getenv('TEAMS_TOKEN');
+      const TEAMS_SPACE = await getenv('TEAMS_SPACE');
+      if (!TEAMS_TOKEN || !TEAMS_SPACE) {
+         console.debug(`error while loading env variables: ${err.message}`);
+         console.error(`please check TEAMS_TOKEN and TEAMS_SPACE are specified, aborting...`);
+         return;
+      }
+      console.info(`macro configured with spaceId: ${TEAMS_SPACE}`);
+      chatops = new WebexTeamsChatOps(TEAMS_TOKEN, TEAMS_SPACE);
+   }
+   catch (err) {
+      console.debug(`error while loading env variables: ${err.message}`);
+      console.error(`cannot load environment variables: TEAMS_TOKEN and/or TEAMS_SPACE, aborting...`);
+      return;
+   }
+
+   // Post message
+   chatops.push('Hey, this is Steve');
 });
 
+
+//
+// ENV library
+//   - getenv() function
+//
 
 // Configure if the communications should be encrypted
 const encrypted = false;
@@ -124,8 +150,7 @@ function getenv(variable) {
 }
 
 // Introduce a new event 'env-ready' that fires when 'Environment' macro is ready:
-//
-//     xapi.on('env-ready')
+// - xapi.on('env-ready')
 //
 xapi.on('ready', async () => {
    const ENV_RETRY_DELAY = 500;
@@ -174,7 +199,7 @@ async function checkEnvironmentIsReady() {
    }
 }
 
-
+// Symetric crypto functions
 // Extract from https://stackoverflow.com/questions/18279141/javascript-string-encryption-and-decryption
 // Contributed by https://stackoverflow.com/users/2861702/jorgeblom
 //
@@ -198,4 +223,91 @@ const decipher = salt => {
       .map(applySaltToChar)
       .map(charCode => String.fromCharCode(charCode))
       .join('');
+}
+
+
+//
+// ChatOps Library for Webex Teams
+//   - chatops = new WebexTeamsChatOps(token, space);
+//   - chatops.push(message);
+//
+
+function WebexTeamsChatOps(token, space) {
+   this.token = token;
+   this.space = space;
+}
+
+WebexTeamsChatOps.prototype.push = function (msg, cb) {
+
+   // Post message
+   let payload = {
+      "markdown": msg,
+      "roomId": this.space
+   }
+   xapi.command(
+      'HttpClient Post',
+      {
+         Header: ["Content-Type: application/json", "Authorization: Bearer " + this.token],
+         Url: "https://api.ciscospark.com/v1/messages",
+         AllowInsecureHTTPS: "True",
+         ResultBody: 'plaintext'
+      },
+      JSON.stringify(payload))
+      .then((response) => {
+         console.debug(`received response with status code: ${response.StatusCode}`);
+
+         if (response.StatusCode == 200) {
+            console.debug("message pushed to Webex Teams");
+
+            // Retrieve message id
+            let result = JSON.parse(response.Body);
+            console.debug(`message id: ${result.id}`);
+            if (cb) cb(null, result.id);
+            return;
+         }
+
+         // This should not happen as Webex REST API always return 200 OK for POST requests
+         console.debug("failed with status code: " + response.StatusCode);
+         if (cb) cb("failed with status code: " + response.StatusCode, response.StatusCode);
+      })
+      .catch((err) => {
+         console.debug(`POST failed with err: ${err.message}`);
+
+         switch (err.message) {
+            case 'Unknown command':
+               // Can be caught at coding time
+               console.debug("the HttpClient verb is not correct");
+               break;
+
+            case 'HttpClientPostResult':
+            case 'HttpClientDeleteResult':
+               console.debug(`failed with err status: ${err.data.status}`);
+               if (err.data.status === 'Error') {
+
+                  // Typically: hostname not found  
+                  if (err.data.Message) {
+                     console.debug("data message: " + err.data.Message);
+                     break;
+                  }
+
+                  // Typically: the response status code is 4xx or 5xx
+                  if (err.data.StatusCode) {
+                     switch(err.data.StatusCode) {
+                        case 401:
+                           console.error('Cannot push to Webex Teams: incorrect access token for Webex Teams (401 Unauthorized)');
+                           return;
+                        default:
+                           console.debug("status code: " + err.data.StatusCode);
+                           console.error(`Cannot push to Webex Teams: status code ${err.data.StatusCode}`);
+                           return;
+                     }
+
+                     // Note: err.data.Headers can also be retrieved, though not the body of the response (no ResponseBody attribute here)
+                     break;
+                  }
+               }
+         }
+
+         if (cb) cb("Could not post message to Webex Teams", null);
+      })
 }

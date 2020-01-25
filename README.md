@@ -1,23 +1,38 @@
-# Environment variables for CE macros [![published](https://static.production.devnetcloud.com/codeexchange/assets/images/devnet-published.svg)](https://developer.cisco.com/codeexchange/github/repo/ObjectIsAdvantag/macros-env)
+# Environment variables for Macros [![published](https://static.production.devnetcloud.com/codeexchange/assets/images/devnet-published.svg)](https://developer.cisco.com/codeexchange/github/repo/ObjectIsAdvantag/macros-env)
 
-Enhance your macro runtime with ENV variables:
+Enhance your Webex Devices Macro runtime with environment variables:
 - ENV is shared across macros on the same device
 - ENV can be volatile or persisted (by default)
 - ENV can be modified over HTTP on the LAN 
 - if cloud-registered, a device ENV can be modified over Webex /xapi endpoint)
 
 
+## Usage
+
+Wait for the 'env-ready' event and load variables for local ENV:
+
+> note : there are multiple options when it comes to initializing a macro with ENV variables. Check the [example folder](examples/) for other coding styles and use cases.
+
 ```javascript
 const xapi = require('xapi');
 
-async function init(ENV) {
+// Wait for ENV variables to be accesible
+xapi.on('env-ready', async (ready) => {
 
-   // Example
-   let value = await ENV('DEVICE_SECRET');
-   console.log(`echo \$DEVICE_SECRET = ${value}`);
-}
+   const value = await getenv('DEVICE_SECRET');
 
-// getenv() function
+   xapi.command('UserInterface Message Prompt Display', {
+      Title: 'ENV',
+      Text: `$DEVICE_SECRET = ${value}`,
+      Duration: 10
+   });
+   
+});
+
+//
+// ENV library
+//   - getenv() function
+//
 ...
 ```
 
@@ -28,10 +43,9 @@ async function init(ENV) {
 
 2. Activate the 'environment' macro.
 
-   > a new 'ENV' macro is created which you do not need to activate.
-   > this macro is used for the sole purpose of persisting the changes you could make to ENV variables.
+3. Copy the [env-ready](env-ready.min.js) macro to the device, and activate it too.
 
-3. Copy the [getenv](getenv-minified.js) macro to the device, and activate it too.
+   > You can pick either the minified or expanded version of 'env-ready'.
 
 4. Check the logs in the Macro Editor, you should see:
 
@@ -49,8 +63,9 @@ async function init(ENV) {
 
 5. Congrats, your ENV is working!
 
-   You can now copy the [getenv](getenv-minified.js) code snippet to an existing macro,
-   and invoke ENV() which is passed by `init(ENV)`.
+   You can now copy the [env-ready](env-ready.min.js) code snippet to an existing macro,
+   and initialize your macro from the `xapi.on('env-ready', async (ready) => { ... })` code block.
+   Check the [examples folder](examples/) for inspiration.
 
    _Note that if a variable is not found in ENV, an empty value is returned._
 
@@ -69,12 +84,20 @@ async function init(ENV) {
 
 - **Configure your ENV to be volatile or persistent** by changing the value of volatile in in [environment](environment.js): 
 
+   The environment is volatile by default.
+
    ```javascript
-   const volatile = false; // set to false for persisted ENV variables
+   const volatile = true; // set to false for persisted ENV variables
    ```
+   
+   When changed to persistent, a 'ENV' file will be automatically created with the contents of the DEFAULT_ENV. 
+   The 'ENV' file is materialized by another macro on your device. 
+   Refresh the Macro Editor to make the 'ENV' macro appear. 
+   
+   As you update the DEFAULT_ENV in the 'environment' macro, make sure to delete the 'ENV' macro in order to re-initialize the ENV of the device.
 
 
-- **Create or update an ENV variable** by sending a message on the LAN or from the cloud
+- **Create or update ENV variables** by sending a message on the LAN or from the cloud
 
    > Note: the commands below won't work if the communications via Message/Send/Text commands are encrypted (see below)
 
@@ -109,6 +132,11 @@ async function init(ENV) {
    ```
 
 
+## Architecture
+
+TODO: add details about the design
+
+
 ## Security concerns
 
 The communications between the macros reading the ENV, and the 'environment' macro managing the ENV are send in clear text, via xCommand 'Message Send Text'.
@@ -132,3 +160,4 @@ Feel free to replace / enhance with a crypto algorithm that better meets your ne
 If secrets are to be stored, we recommend you encrypt these secrets before passing them to the environment.
 
 Check the xapi-samples for examples of [symetric](https://github.com/CiscoDevNet/xapi-samples/blob/master/macros/15-cipher.js) and [asymetric](https://github.com/CiscoDevNet/xapi-samples/blob/master/macros/16-encrypt-rsa.js) algorithms compatible with CE's macro runtime.
+
