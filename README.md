@@ -140,22 +140,29 @@ xapi.on('env-ready', async (ready) => {
 
 ### Background information
 
-When deploying CE customizations, you may use one or several of the strategies below:
+When deploying CE customizations, one (or several combined) of the strategies below must be used to deal with secrets:
 - inject secrets along the CI/CD pipeline [see diagram](img/deploy_cicd.png)
 - dynamically load secrets from a Vault [see diagram](img/load_vault.png)
 - or load secrets from the local device, which is the purpose of this project (see below)
 
+
 ### Architecture
+
+Using a Pub/Sub pattern, macros can request environment variables from an 'Environment' macro, that can provide static , volative or persisted values.
+
+![macro_env](img/macro_env.png)
+
+
+### Design
 
 This project uses the device local bus to enable communication across Macros.
 
 ![local_bus](img/local_bus.png)
 
-Using a Pub/Sub pattern, your macro request an 'Environment' macro for the value of environment variables.
 
-![macro_env](img/macro_env.png)
-
-
+Moreover, the code uses several pattenrs to implement features not supported by CE:
+- ordering of Macros (to ensure the 'Environment' macros is accessible before others macros are run)
+- data persistance (to persist environment variables across macro runtime restarts)
 
 
 ## Security concerns
