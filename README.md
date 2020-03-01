@@ -138,7 +138,24 @@ xapi.on('env-ready', async (ready) => {
 
 ## Architecture
 
-TODO: add details about the design
+### Background information
+
+When deploying CE customizations, you may use one or several of the strategies below:
+- inject secrets along the CI/CD pipeline [see diagram](img/deploy_cicd.png)
+- dynamically load secrets from a Vault [see diagram](img/load_vault.png)
+- or load secrets from the local device, which is the purpose of this project (see below)
+
+### Architecture
+
+This project uses the device local bus to enable communication across Macros.
+
+![local_bus](img/local_bus.png)
+
+Using a Pub/Sub pattern, your macro request an 'Environment' macro for the value of environment variables.
+
+![macro_env](img/macro_env.png)
+
+
 
 
 ## Security concerns
